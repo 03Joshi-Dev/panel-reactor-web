@@ -403,6 +403,8 @@ document.addEventListener('DOMContentLoaded', function () {
             errorMessage.classList.add('hidden');
         };
         ws.onmessage = function(event) {
+            console.log("Dato recibido del servidor:", event.data);
+
             try {
                 const data = JSON.parse(event.data);
                 if (data.error) {
@@ -410,11 +412,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     errorMessage.classList.remove('hidden');
                     return;
                 }
-                if (data.ph !== undefined) livePh.textContent = data.ph.toFixed(2);
+                
+                if (data.ph !== undefined) {
+                    livePh.textContent = data.ph.toFixed(2);
+                }
+                
                 if (data.temp !== undefined) {
                     liveTemp.innerHTML = `${data.temp.toFixed(1)} <span class="text-2xl">&deg;C</span>`;
                 }
-                
+
             } catch (e) { 
                 console.error('Error al procesar el mensaje:', e); 
             }
