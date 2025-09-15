@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Reactor Estruvita</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        <header class="text-center mb-8 no-print relative">
+            <h1 class="text-4xl font-extrabold">Panel de Control del Reactor de Estruvita</h1>
+            <p class="subtle-text mt-2">Protocolos de operación y herramientas de cálculo.</p>
+            <button id="theme-toggle" class="absolute top-0 right-0 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm-.707 8.486a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM3 11a1 1 0 100-2H2a1 1 0 100 2h1z"></path></svg>
+            </button>
+        </header>
+
+        <div class="card card-shadow mb-8 p-6 no-print">
+            <h2 class="text-xl font-bold mb-4">Monitor en Tiempo Real</h2>
+            <div class="flex items-center mb-4"><span id="status-dot" class="status-dot status-connecting"></span><span id="status-text" class="font-semibold">Conectando...</span></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                <div class="blue-accent p-4 rounded-xl"><p class="text-lg">pH Actual</p><p id="live-ph" class="text-4xl font-extrabold my-1">--.--</p></div>
+                <div class="orange-accent p-4 rounded-xl"><p class="text-lg">Temperatura Actual</p><p id="live-temp" class="text-4xl font-extrabold my-1">--.- <span class="text-2xl">&deg;C</span></p></div>
+            </div>
+            <div id="error-message" class="text-red-600 mt-4 text-sm hidden"></div>
+        </div>
+
+        <div class="card card-shadow mb-8 p-6 no-print">
+            <h2 class="text-xl font-bold mb-4">Historial de Datos Recientes</h2>
+            <canvas id="realtimeChart"></canvas>
+        </div>
+
+        <div class="card card-shadow overflow-hidden">
+            <div class="border-custom border-b no-print">
+                <nav class="flex -mb-px px-6" aria-label="Tabs">
+                    <button id="tab-protocolo" class="tab-btn tab-active w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm">Protocolo y Checklists</button>
+                    <button id="tab-calculadora" class="tab-btn w-1/2 py-4 px-1 text-center border-b-2 border-transparent subtle-text hover:border-gray-300">Calculadora de MgO</button>
+                </nav>
+            </div>
+            <div id="tab-content" class="p-6 md:p-8">
+                <div id="content-protocolo">
+                    <div class="space-y-4" id="checklist-container">
+                        <div id="content-protocolo">
+                            <div class="space-y-4" id="checklist-container">
+                                <div class="accordion-item border-custom border rounded-lg">
+                                    <button class="accordion-header w-full flex justify-between items-center p-4 text-left font-semibold"><h3 class="text-lg">1. Puesta en Marcha</h3><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
+                                    <div class="accordion-content">
+                                        <ul class="p-4 pt-0 space-y-4">
+                                            <li>
+                                                <div class="flex items-start"><input type="checkbox" id="chk-1" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Inspección pre-arranque</strong>: Verificar integridad mecánica y eléctrica del sistema (tuberías, mangueras, bombas, agitadores y conexiones).</span></div>
+                                                <div class="checklist-item-detail"><p>- Asegurar que no haya fugas, dobleces o conexiones flojas.</p><p>- Confirmar que los cables y fuentes de alimentación estén en buen estado.</p></div>
+                                                <div class="verification-info hidden mt-2"></div>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-start"><input type="checkbox" id="chk-2" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Análisis inicial de digerido</strong>: Tomar y analizar una muestra representativa del digerido para determinar la concentración de fosfatos.</span></div>
+                                                <div class="checklist-item-detail"><p>- Este valor se utiliza en la "Calculadora de MgO" para determinar la masa de reactivo a preparar.</p><p>- Analizar la muestra con el kit de fosfatos. No almacenar la muestra.</p></div>
+                                                <div class="verification-info hidden mt-2"></div>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-start"><input type="checkbox" id="chk-3" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Preparación de reactivos</strong>: Preparar la solución de MgO según la masa calculada y asegurar volumen y homogeneidad.</span></div>
+                                                <div class="checklist-item-detail"><p>- Pesar la masa de MgO indicada por la calculadora y disolver/agitar hasta obtener una suspensión homogénea.</p><p>- Verificar niveles en baldes de reactivos y digerido.</p></div>
+                                                <div class="verification-info hidden mt-2"></div>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-start"><input type="checkbox" id="chk-4" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Estado estable</strong>: Tras el arranque, tomar muestras cada 10 minutos y analizar con el kit de fosfatos hasta obtener 3 lecturas consecutivas similares.</span></div>
+                                                <div class="checklist-item-detail"><p>- Una vez obtenidas tres lecturas consecutivas con concentraciones consistentes, proceder a la operación en continuo.</p></div>
+                                                <div class="verification-info hidden mt-2"></div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="accordion-item border-custom border rounded-lg">
+                                     <button class="accordion-header w-full flex justify-between items-center p-4 text-left font-semibold"><h3 class="text-lg">2. Operación en continuo</h3><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
+                                    <div class="accordion-content">
+                                       <ul class="p-4 pt-0 space-y-4">
+                                            <li>
+                                                <div class="flex items-start"><input type="checkbox" id="chk-5" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Monitoreo</strong>: Recolectar y analizar muestras de sobrenadante cada 20 minutos con el kit de fosfatos (no almacenar).</span></div>
+                                                <div class="checklist-item-detail"><p>- Etiquetar registrando la hora de muestreo para trazabilidad.</p></div>
+                                                <div class="verification-info hidden mt-2"></div>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-start"><input type="checkbox" id="chk-6" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Revisión de niveles</strong>: Inspeccionar niveles en tanques y reactor para asegurar flujo continuo.</span></div>
+                                                <div class="checklist-item-detail"><p>- Inspección visual cada 15 minutos en los tanques de digerido y de solución de MgO.</p></div>
+                                                <div class="verification-info hidden mt-2"></div>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-start"><input type="checkbox" id="chk-7" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Inspección del sistema</strong>: Revisar integridad mecánica y ruidos anómalos en bombas y agitadores.</span></div>
+                                                <div class="checklist-item-detail"><p>- Inspección cada 30 minutos; detener y revisar ante ruidos inusuales o fugas.</p></div>
+                                                <div class="verification-info hidden mt-2"></div>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-start"><input type="checkbox" id="chk-8" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Verificar tiempos de retención</strong>: Confirmar que han transcurrido al menos tres tiempos de retención promedio antes de considerar la parada programada.</span></div>
+                                                <div class="checklist-item-detail"><p>- Calcular el tiempo de retención promedio y comprobar que se hayan cumplido tres ciclos antes de iniciar la secuencia de parada.</p></div>
+                                                <div class="verification-info hidden mt-2"></div>
+                                            </li>
+                                       </ul>
+                                    </div>
+                                </div>
+                                <div class="accordion-item border-custom border rounded-lg">
+                                     <button class="accordion-header w-full flex justify-between items-center p-4 text-left font-semibold"><h3 class="text-lg">3. Parada programada</h3><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button>
+                                    <div class="accordion-content">
+                                       <ul class="p-4 pt-2 space-y-4">
+                                           <li>
+                                               <div class="flex items-start"><input type="checkbox" id="chk-9" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Secuencia de apagado</strong>: Detener equipos en orden inverso al arranque.</span></div>
+                                               <div class="checklist-item-detail"><p>1. Detener bombas peristálticas.</p><p>2. Parar agitador del reactor tras 5 min de mezcla y apagar.</p><p>3. Apagar agitador de la solución de MgO.</p><p>4. Apagar sistema de monitorización.</p></div>
+                                               <div class="verification-info hidden mt-2"></div>
+                                           </li>
+                                           <li>
+                                               <div class="flex items-start"><input type="checkbox" id="chk-10" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Protocolo de limpieza</strong>: Lavar el sistema para dejarlo listo para la siguiente corrida.</span></div>
+                                               <div class="checklist-item-detail"><p>- Bombear agua limpia a través de todo el circuito inmediatamente después del apagado.</p><p>- Si es necesario, desmontar y realizar limpieza manual y desinfección.</p></div>
+                                               <div class="verification-info hidden mt-2"></div>
+                                           </li>
+                                           <li>
+                                               <div class="flex items-start"><input type="checkbox" id="chk-11" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Toma de muestra final y decantación</strong>: Tomar muestra de sobrenadante para análisis con kit de fosfatos (no almacenar) y proceder a decantación para recuperar estruvita.</span></div>
+                                               <div class="checklist-item-detail"><p>- <strong>Sobrenadante:</strong> Tomar aprox. 50 mL tras detener la agitación y analizar con el kit de fosfatos (sin almacenar).</p><p>- <strong>Decantación:</strong> Vaciar el reactor y someter el efluente a un proceso de decantación para separar y recuperar los sólidos de estruvita; recolectar el precipitado seco para análisis y disposición.</p></div>
+                                               <div class="verification-info hidden mt-2"></div>
+                                           </li>
+                                           <li>
+                                               <div class="flex items-start"><input type="checkbox" id="chk-12" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Aseguramiento final</strong>: Desconectar todas las fuentes de energía y dejar el equipo en estado seguro.</span></div>
+                                               <div class="verification-info hidden mt-2"></div>
+                                           </li>
+                                       </ul>
+                                    </div>
+                                </div>
+                                 <div class="accordion-item emergency-section rounded-lg">
+                                    <button class="accordion-header emergency-header w-full flex justify-between items-center p-4 text-left font-semibold">
+                                       <h3 class="text-lg">4. Parada de emergencia</h3><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                    <div class="accordion-content">
+                                       <div class="p-4 pt-0">
+                                           <p class="font-semibold mb-4">Ante cualquier evento que suponga riesgo (derrame mayor, rotura, fallo eléctrico, fuga química, incendio), seguir estos pasos:</p>
+                                           <ol class="list-decimal list-inside space-y-2">
+                                               <li><strong>Corte de energía general:</strong> Desconectar la alimentación principal de todos los equipos de inmediato.</li>
+                                               <li><strong>Contención:</strong>
+                                                   <ul class="list-disc list-inside ml-6 mt-1">
+                                                       <li>Usar material absorbente para contener derrames.</li>
+                                                       <li>En caso de fuga química, utilizar EPP y kits de derrame.</li>
+                                                       <li>Para incendios pequeños, emplear extintor tipo ABC.</li>
+                                                   </ul>
+                                               </li>
+                                               <li><strong>Evacuación y comunicación:</strong>
+                                                   <ul class="list-disc list-inside ml-6 mt-1">
+                                                       <li>Alertar al personal y activar alarma si procede.</li>
+                                                       <li>Contactar al supervisor y al equipo de seguridad.</li>
+                                                   </ul>
+                                               </li>
+                                               <li><strong>Evaluar:</strong> Identificar la causa solo si es seguro hacerlo.</li>
+                                               <li><strong>No reiniciar:</strong> No reanudar el sistema hasta que personal calificado confirme seguridad.</li>
+                                           </ol>
+                                           <div class="mt-4 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                                               <p class="font-semibold">📞 Contactos de emergencia:</p>
+                                               <ul class="list-disc list-inside ml-4 mt-1">
+                                                   <li><strong>Supervisora del Laboratorio:</strong> Maria Jose Uribe Muñoz - +57 317 6635702</li>
+                                                   <li><strong>Línea de Emergencias UIS:</strong> +57 6344000 ext 2000 - 2999</li>
+                                                   <li><strong>Línea Nacional de Emergencias:</strong> 123</li>
+                                               </ul>
+                                           </div>
+                                       </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-8 flex space-x-4 no-print">
+                                <button id="reset-btn" class="w-1/3 btn-secondary font-bold py-2 px-4 rounded-lg">Reiniciar</button>
+                                <button id="print-btn" class="w-1/3 bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg">Imprimir PDF</button>
+                                <button id="send-btn" class="w-1/3 bg-green-600 text-white font-bold py-2 px-4 rounded-lg opacity-50 cursor-not-allowed" disabled>Enviar PDF</button>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                <div id="content-calculadora" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-6">
+                            <h3 class="text-lg font-semibold border-b border-custom pb-2">Datos del proceso</h3>
+                            <div><label for="flow_digestate" class="block text-sm font-medium">Caudal de digerido (mL/min)</label><input type="number" id="flow_digestate" placeholder="Ej: 1000" class="input-custom mt-1"></div>
+                            <div><label for="po4_concentration" class="block text-sm font-medium">Concentración de PO₄³⁻ (mg/L)</label><input type="number" id="po4_concentration" placeholder="Ej: 150" class="input-custom mt-1"></div>
+                            <div><label for="flow_mgo" class="block text-sm font-medium">Caudal de solución de MgO (mL/min)</label><input type="number" id="flow_mgo" placeholder="Ej: 1000" class="input-custom mt-1"></div>
+                            <div><label class="block text-sm font-medium">Relación molar (Mg²⁺ : PO₄³⁻)</label><div class="flex items-center space-x-2"><input type="number" id="mg_ratio" value="1.2" class="input-custom"><span class="font-semibold">:</span><input type="number" value="1" class="input-custom" disabled></div></div>
+                        </div>
+                        <div class="space-y-6">
+                            <h3 class="text-lg font-semibold border-b border-custom pb-2">Datos de preparación</h3>
+                            <div><label for="prep_volume" class="block text-sm font-medium">Volumen a preparar (mL)</label><input type="number" id="prep_volume" placeholder="Ej: 1000" class="input-custom mt-1"></div>
+                            <div><label for="mgo_purity" class="block text-sm font-medium">Pureza del MgO (%)</label><input type="number" id="mgo_purity" value="98.3" class="input-custom mt-1"></div>
+                        </div>
+                    </div>
+                    <div class="mt-8 flex space-x-4">
+                        <button id="clearBtn" class="w-1/3 btn-secondary font-bold py-3 px-4 rounded-lg">Limpiar</button>
+                        <button id="calculateBtn" class="w-2/3 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">Calcular</button>
+                    </div>
+                    <div id="result-section" class="blue-accent p-6 mt-8 border-t border-custom rounded-lg hidden">
+                        <h2 class="text-xl font-bold text-center mb-6">Resultado</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                            <div class="card p-4 rounded-xl"><p>Concentración requerida:</p><p id="result_conc" class="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400">0.00 g/L</p></div>
+                            <div class="card p-4 rounded-xl"><p>Masa de MgO a pesar:</p><p id="result_mass" class="text-3xl font-extrabold text-green-600 dark:text-green-400">0.0000 g</p></div>
+                        </div>
+                        <div class="mt-6"><h3 class="text-lg font-semibold">Pasos del cálculo:</h3><div id="calculation_steps" class="space-y-2 text-sm card p-4 rounded-lg border border-custom"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="text-center mt-6 text-xs subtle-text no-print">
+            <p>Aplicación para control de proceso de precipitación de estruvita.</p>
+        </footer>
+    </div>
+
+    <div id="verification-modal" class="modal">
+        <div class="modal-content"><h3 class="text-lg font-semibold mb-4">Registrar verificación</h3><p class="mb-2">Por favor, ingrese su nombre:</p><input type="text" id="verifier-name" class="input-custom mb-4"><div class="flex justify-end space-x-2"><button id="modal-cancel" class="btn-secondary px-4 py-2 rounded-lg">Cancelar</button><button id="modal-confirm" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Confirmar</button></div></div>
+    </div>
+    
+    <script src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+:root {
+    --bg-color: #f3f4f6; --card-bg-color: #ffffff; --text-color: #1f2937; --subtle-text-color: #6b7280;
+    --border-color: #d1d5db; --tab-active-bg: #eef2ff; --blue-accent-bg: #eff6ff; --orange-accent-bg: #fff7ed;
+    --button-secondary-bg: #e5e7eb; --input-bg-color: #ffffff; --input-text-color: #111827;
+}
+html.dark {
+    --bg-color: #111827; --card-bg-color: #1f2937; --text-color: #f9fafb; --subtle-text-color: #9ca3af;
+    --border-color: #4b5563; --tab-active-bg: #312e81; --blue-accent-bg: #1e3a8a; --orange-accent-bg: #7c2d12;
+    --button-secondary-bg: #374151; --input-bg-color: #374151; --input-text-color: #f9fafb;
+}
+body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); }
+.card { background-color: var(--card-bg-color); border-radius: 1rem; }
+.modal-content {
+    background-color: var(--card-bg-color); padding: 2.5rem; border-radius: 1rem; 
+    width: 90%; max-width: 450px;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+.subtle-text { color: var(--subtle-text-color); }
+.border-custom { border-color: var(--border-color); }
+.input-custom {
+    background-color: var(--input-bg-color); color: var(--input-text-color); border-width: 2px;
+    border-style: solid; border-color: var(--border-color); padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem; width: 100%;
+}
+.tab-active { background-color: var(--tab-active-bg); }
+.blue-accent { background-color: var(--blue-accent-bg); }
+.orange-accent { background-color: var(--orange-accent-bg); }
+.btn-secondary { background-color: var(--button-secondary-bg); }
+.card-shadow { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+.accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
+.checklist-item-detail { padding-left: 2.5rem; border-left: 2px solid var(--border-color); margin-left: 0.625rem; margin-top: 0.5rem; }
+.verification-info { background-color: var(--blue-accent-bg); padding: 0.5rem; border-radius: 0.375rem; margin-top: 0.5rem; font-size: 0.875rem; }
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
+.status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+.status-connected { background-color: #22c55e; }
+.status-disconnected { background-color: #ef4444; }
+.status-connecting { background-color: #eab308; }
+.pdf-clone-container { position: absolute; top: 0; left: -9999px; width: 800px; padding: 1rem; background-color: var(--card-bg-color); }
+.pdf-clone-container .accordion-content { max-height: none !important; }
+.pdf-clone-container svg { display: none !important; }
+@media print { body * { visibility: hidden; } #content-protocolo, #content-protocolo * { visibility: visible; } #content-protocolo { position: absolute; left: 0; top: 0; width: 100%; } .no-print { display: none; } .accordion-content { max-height: none !important; overflow: visible !important; } }
+.emergency-section { background-color: #fee2e2; border: 2px solid #ef4444; }
+.emergency-header { background-color: #fecaca; color: #dc2626; }
+@media (prefers-color-scheme: dark) {
+    .emergency-section { background-color: #7f1d1d; border-color: #ef4444; }
+    .emergency-header { background-color: #991b1b; color: #fecaca; }
+}
+/* Asegurar que el bloque de la calculadora use el mismo color de texto que el protocolo/checklist */
+#content-calculadora { color: var(--text-color); }
+#content-calculadora h3, #content-calculadora label, #content-calculadora p, #content-calculadora .input-custom, #content-calculadora .card { color: var(--text-color); }
+/* Forzar color en pestaña activa para evitar que la clase subtle-text deje la etiqueta gris */
+.tab-btn.tab-active { color: var(--text-color); }
+/* Igualar tamaños de fuente del bloque de la calculadora con el protocolo */
+#content-calculadora h3 { font-size: 1.125rem; font-weight: 600; }
+#content-calculadora p, #content-calculadora label { font-size: 0.875rem; }
+#content-calculadora .card { font-size: 1rem; }
+
+/* Small focus styles for accessibility */
+.tab-btn:focus, .accordion-header:focus, .input-custom:focus { outline: 3px solid rgba(59,130,246,0.25); outline-offset: 2px; }
