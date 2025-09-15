@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Reactor Estruvita</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .card-shadow { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+        .tab-active { border-color: #4f46e5; color: #4f46e5; background-color: #eef2ff; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
+        .checklist-item-detail { padding-left: 2.5rem; border-left: 2px solid #e5e7eb; margin-left: 0.625rem; margin-top: 0.5rem; }
+        .verification-info { background-color: #f0f9ff; padding: 0.5rem; border-radius: 0.375rem; margin-top: 0.5rem; font-size: 0.875rem; color: #0369a1; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background-color: white; padding: 2rem; border-radius: 0.5rem; width: 90%; max-width: 400px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; transition: background-color 0.5s; }
+        .status-connected { background-color: #22c55e; }
+        .status-disconnected { background-color: #ef4444; }
+        .status-connecting { background-color: #eab308; }
+        @media print {
+            body * { visibility: hidden; }
+            #content-protocolo, #content-protocolo * { visibility: visible; }
+            #content-protocolo { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none; }
+            .accordion-content { max-height: none !important; overflow: visible !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        <header class="text-center mb-8 no-print">
+            <h1 class="text-4xl font-extrabold text-gray-800">Panel de Control del Reactor de Estruvita</h1>
+            <p class="text-gray-500 mt-2">Protocolos de operación y herramientas de cálculo.</p>
+        </header>
+
+        <div class="bg-white rounded-2xl card-shadow mb-8 p-6 no-print">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Monitor en Tiempo Real</h2>
+            <div class="flex items-center mb-4">
+                <span id="status-dot" class="status-dot status-connecting"></span>
+                <span id="status-text" class="font-semibold text-gray-600">Conectando al servidor...</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                <div class="bg-blue-50 p-4 rounded-xl"><p class="text-lg text-blue-800">pH Actual</p><p id="live-ph" class="text-4xl font-extrabold text-blue-600 my-1">--.--</p></div>
+                <div class="bg-orange-50 p-4 rounded-xl"><p class="text-lg text-orange-800">Temperatura Actual</p><p id="live-temp" class="text-4xl font-extrabold text-orange-600 my-1">--.- <span class="text-2xl">&deg;C</span></p></div>
+            </div>
+            <div id="error-message" class="text-red-600 mt-4 text-sm hidden"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+            <div class="border-b border-gray-200 no-print">
+                <nav class="flex -mb-px px-6" aria-label="Tabs">
+                    <button id="tab-protocolo" class="tab-btn tab-active w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm">Protocolo y Checklists</button>
+                    <button id="tab-calculadora" class="tab-btn w-1/2 py-4 px-1 text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700">Calculadora de MgO</button>
+                </nav>
+            </div>
+
+            <div id="tab-content" class="p-6 md:p-8">
+                <div id="content-protocolo">
+                    <div class="space-y-4">
+                        <div class="accordion-item border rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100">
+                                <span>1. Puesta en Marcha</span><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="accordion-content">
+                                <ul class="p-4 pt-0 space-y-4 text-gray-700">
+                                    <li>
+                                        <div class="flex items-start"><input type="checkbox" id="chk-1" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Inspección Pre-arranque:</strong> Revisar la integridad de todos los componentes del sistema.</span></div>
+                                        <div class="checklist-item-detail text-sm text-gray-600"><p>- <strong>Reactor y Tuberías:</strong> Verificar que todas las mangueras estén firmemente conectadas, sin dobleces y que no presenten fugas. Asegurar que la manguera de salida por desborde tenga una pendiente descendente continua.</p><p>- <strong>Equipos Eléctricos:</strong> Confirmar que cables de bombas, agitadores y Arduino no estén dañados y estén conectados a una fuente de energía segura.</p></div>
+                                        <div class="verification-info hidden mt-2"></div>
+                                    </li>
+                                    <li>
+                                        <div class="flex items-start"><input type="checkbox" id="chk-2" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Preparación y Verificación de Reactivos:</strong> Asegurar que las soluciones estén listas y correctamente dispuestas.</span></div>
+                                        <div class="checklist-item-detail text-sm text-gray-600"><p>- <strong>Solución MgO:</strong> Llenar el balde azul con el volumen de agua destilada requerido y la masa de MgO calculada. Encender el agitador para garantizar una suspensión homogénea (aspecto lechoso).</p><p>- <strong>Digerido:</strong> Asegurar que el balde rojo tenga suficiente volumen de digerido para la corrida experimental.</p></div>
+                                        <div class="verification-info hidden mt-2"></div>
+                                    </li>
+                                    <li>
+                                        <div class="flex items-start"><input type="checkbox" id="chk-3" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Calibración de Equipos:</strong> Garantizar la precisión de mediciones y dosificaciones.</span></div>
+                                        <div class="checklist-item-detail text-sm text-gray-600"><p>- <strong>Bombas Peristálticas:</strong> Calibrar cada bomba (blanca y gris) midiendo el volumen bombeado en un minuto a la velocidad de trabajo. Ajustar la velocidad si es necesario hasta alcanzar el caudal deseado.</p><p>- <strong>Sensor de pH:</strong> Realizar una calibración de dos puntos del sensor de pH usando soluciones buffer estándar (ej. pH 7 y pH 10).</p></div>
+                                        <div class="verification-info hidden mt-2"></div>
+                                    </li>
+                                    <li>
+                                        <div class="flex items-start"><input type="checkbox" id="chk-4" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Secuencia de Arranque:</strong> Iniciar los equipos en el orden correcto para asegurar una operación estable.</span></div>
+                                        <div class="checklist-item-detail text-sm text-gray-600"><p>1. Encender el agitador de la solución MgO y verificar que los sólidos estén en suspensión.</p><p>2. Encender el agitador del reactor CSTR a 200 rpm.</p><p>3. Encender el sistema de monitoreo Arduino y verificar que las lecturas de pH y temperatura sean estables y coherentes.</p><p>4. Purgar las bombas haciendo circular el líquido de vuelta a sus respectivos tanques por unos segundos para eliminar burbujas de aire de las mangueras.</p><p>5. Colocar las mangueras de entrada en el reactor e iniciar simultáneamente ambas bombas peristálticas a sus caudales preestablecidos.</p></div>
+                                        <div class="verification-info hidden mt-2"></div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="accordion-item border rounded-lg">
+                             <button class="accordion-header w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100">
+                                <span>2. Operación en Continuo</span><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="accordion-content">
+                               <ul class="p-4 pt-0 space-y-4 text-gray-700">
+                                    <li>
+                                        <div class="flex items-start"><input type="checkbox" id="chk-5" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Monitoreo de Parámetros Clave:</strong> Registrar datos para el seguimiento del experimento.</span></div>
+                                        <div class="checklist-item-detail text-sm text-gray-600"><p>- <strong>Cada 15 minutos:</strong> Anotar en la bitácora de laboratorio la fecha, hora, pH y temperatura mostrados por el Arduino. Verificar visualmente que el nivel en los tanques de alimentación desciende.</p></div>
+                                        <div class="verification-info hidden mt-2"></div>
+                                    </li>
+                                     <li>
+                                        <div class="flex items-start"><input type="checkbox" id="chk-6" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Inspección del Sistema:</strong> Asegurar la integridad física y operativa del montaje.</span></div>
+                                         <div class="checklist-item-detail text-sm text-gray-600"><p>- <strong>Cada 30 minutos:</strong> Realizar una inspección visual completa del sistema en busca de goteos o fugas. Comprobar que el flujo de salida por desborde es constante y no hay acumulación de líquido en el reactor por encima del nivel de salida.</p><p>- <strong>Permanentemente:</strong> Estar atento a ruidos inusuales en los motores de agitación o en las bombas. Asegurar que la suspensión de MgO se mantiene homogénea y no hay precipitación en el fondo del balde azul.</p></div>
+                                        <div class="verification-info hidden mt-2"></div>
+                                    </li>
+                               </ul>
+                            </div>
+                        </div>
+                        <div class="accordion-item border rounded-lg">
+                             <button class="accordion-header w-full flex justify-between items-center p-4 text-left font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100">
+                                <span>3. Parada Programada</span><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="accordion-content">
+                               <ul class="p-4 pt-0 space-y-4 text-gray-700">
+                                   <li>
+                                       <div class="flex items-start"><input type="checkbox" id="chk-7" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Secuencia de Apagado:</strong> Detener los equipos en el orden inverso al arranque para un apagado seguro.</span></div>
+                                       <div class="checklist-item-detail text-sm text-gray-600"><p>1. Detener ambas bombas peristálticas (blanca y gris) simultáneamente.</p><p>2. Dejar el agitador del reactor CSTR funcionando durante 5 minutos adicionales para evacuar el contenido remanente.</p><p>3. Apagar el agitador del reactor CSTR.</p><p>4. Apagar el agitador del tanque de MgO.</p><p>5. Apagar el sistema de monitoreo Arduino.</p></div>
+                                       <div class="verification-info hidden mt-2"></div>
+                                   </li>
+                                   <li>
+                                       <div class="flex items-start"><input type="checkbox" id="chk-8" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Protocolo de Limpieza:</strong> Dejar el sistema limpio para el próximo uso.</span></div>
+                                       <div class="checklist-item-detail text-sm text-gray-600"><p>- <strong>Limpieza Inmediata:</strong> Vaciar el contenido del reactor. Bombear agua limpia a través de todo el sistema (mangueras y reactor) para eliminar restos de reactivos y estruvita.</p><p>- <strong>Limpieza Profunda:</strong> Si es necesario, desmontar el reactor y limpiar sus componentes internos manualmente.</p></div>
+                                       <div class="verification-info hidden mt-2"></div>
+                                   </li>
+                                   <li>
+                                       <div class="flex items-start"><input type="checkbox" id="chk-9" class="checklist-item mt-1 mr-3 h-5 w-5 rounded border-gray-300"><span><strong>Aseguramiento Final:</strong> Desconectar todos los equipos de la fuente de energía para garantizar la seguridad.</span></div>
+                                       <div class="verification-info hidden mt-2"></div>
+                                   </li>
+                               </ul>
+                            </div>
+                        </div>
+                         <div class="accordion-item border rounded-lg">
+                            <button class="accordion-header w-full flex justify-between items-center p-4 text-left font-semibold text-red-800 bg-red-50 hover:bg-red-100">
+                               <span>4. Parada de Emergencia</span><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="accordion-content">
+                               <div class="p-4 pt-0 text-red-700">
+                                   <p class="font-semibold">Ante cualquier evento inesperado (derrame, rotura, fallo eléctrico), proceder de la siguiente manera:</p>
+                                   <ol class="list-decimal list-inside space-y-2 mt-2">
+                                       <li><strong>CORTE DE ENERGÍA GENERAL:</strong> Desconectar la fuente de alimentación principal de todos los equipos.</li>
+                                       <li><strong>CONTENER EL PROBLEMA:</strong> Si hay un derrame, usar material absorbente para contenerlo.</li>
+                                       <li><strong>EVALUAR LA CAUSA:</strong> Identificar el origen del fallo.</li>
+                                       <li><strong>NO REINICIAR</strong> hasta que la causa raíz haya sido solucionada.</li>
+                                   </ol>
+                               </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-8 flex space-x-4 no-print">
+                        <button id="reset-btn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg">Reiniciar Checklists</button>
+                        <button id="print-btn" class="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg">Imprimir / Guardar PDF</button>
+                    </div>
+                </div>
+
+                <div id="content-calculadora" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-6">
+                            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Datos del proceso</h3>
+                            <div><label for="flow_digestate" class="block text-sm font-medium">Caudal de digerido (mL/min)</label><input type="number" id="flow_digestate" placeholder="Ej: 1000" class="w-full px-4 py-2 border rounded-lg"></div>
+                            <div><label for="po4_concentration" class="block text-sm font-medium">Concentración de PO₄³⁻ (mg/L)</label><input type="number" id="po4_concentration" placeholder="Ej: 150" class="w-full px-4 py-2 border rounded-lg"></div>
+                            <div><label for="flow_mgo" class="block text-sm font-medium">Caudal de solución de MgO (mL/min)</label><input type="number" id="flow_mgo" placeholder="Ej: 1000" class="w-full px-4 py-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Relación molar (Mg²⁺ : PO₄³⁻)</label><div class="flex items-center space-x-2"><input type="number" id="mg_ratio" value="1.2" class="w-full px-4 py-2 border rounded-lg"><span class="font-semibold">:</span><input type="number" value="1" class="w-full px-4 py-2 border bg-gray-100 rounded-lg" disabled></div></div>
+                        </div>
+                        <div class="space-y-6">
+                            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Datos de preparación</h3>
+                            <div><label for="prep_volume" class="block text-sm font-medium">Volumen a preparar (mL)</label><input type="number" id="prep_volume" placeholder="Ej: 1000" class="w-full px-4 py-2 border rounded-lg"></div>
+                            <div><label for="mgo_purity" class="block text-sm font-medium">Pureza del MgO (%)</label><input type="number" id="mgo_purity" value="98.3" class="w-full px-4 py-2 border rounded-lg"></div>
+                        </div>
+                    </div>
+                    <div class="mt-8 flex space-x-4">
+                        <button id="clearBtn" class="w-1/3 bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg">Limpiar</button>
+                        <button id="calculateBtn" class="w-2/3 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">Calcular</button>
+                    </div>
+                    <div id="result-section" class="bg-gray-50 p-6 mt-8 border-t hidden">
+                        <h2 class="text-xl font-bold text-center mb-6">Resultado</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                            <div class="bg-indigo-100 p-4 rounded-xl"><p>Concentración requerida:</p><p id="result_conc" class="text-3xl font-extrabold text-indigo-600">0.00 g/L</p></div>
+                            <div class="bg-green-100 p-4 rounded-xl"><p>Masa de MgO a pesar:</p><p id="result_mass" class="text-3xl font-extrabold text-green-600">0.0000 g</p></div>
+                        </div>
+                        <div class="mt-6"><h3 class="text-lg font-semibold">Pasos del cálculo:</h3><div id="calculation_steps" class="space-y-2 text-sm bg-white p-4 rounded-lg border"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="text-center mt-6 text-xs text-gray-400 no-print">
+            <p>Aplicación para control de proceso de precipitación de estruvita.</p>
+        </footer>
+    </div>
+
+    <div id="verification-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-lg font-semibold mb-4">Registrar verificación</h3>
+            <p class="mb-2">Por favor, ingrese su nombre:</p>
+            <input type="text" id="verifier-name" class="w-full px-3 py-2 border rounded-lg mb-4" placeholder="Nombre completo">
+            <div class="flex justify-end space-x-2">
+                <button id="modal-cancel" class="px-4 py-2 bg-gray-200 rounded-lg">Cancelar</button>
+                <button id="modal-confirm" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // --- Lógica de Pestañas ---
+    const tabs = document.querySelectorAll('.tab-btn');
+    const tabContents = {
+        'tab-protocolo': document.getElementById('content-protocolo'),
+        'tab-calculadora': document.getElementById('content-calculadora')
+    };
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('tab-active'));
+            Object.values(tabContents).forEach(content => content.classList.add('hidden'));
+            tab.classList.add('tab-active');
+            tabContents[tab.id].classList.remove('hidden');
+        });
+    });
+
+    // --- Lógica de Acordeón ---
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    accordionHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            const content = header.nextElementSibling;
+            const wasOpen = content.style.maxHeight;
+            accordionHeaders.forEach(h => {
+                if (h.nextElementSibling) h.nextElementSibling.style.maxHeight = null;
+            });
+            if (!wasOpen) {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    });
+
+    // --- Lógica de Checklists, Modal y Persistencia ---
+    const modal = document.getElementById('verification-modal');
+    const verifierNameInput = document.getElementById('verifier-name');
+    const modalCancel = document.getElementById('modal-cancel');
+    const modalConfirm = document.getElementById('modal-confirm');
+    let currentCheckbox = null;
+    const checklistItems = document.querySelectorAll('.checklist-item');
+    const CHECKLIST_STORAGE_KEY = 'struviteChecklistState';
+
+    function saveChecklistState(state) {
+        localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadChecklistState() {
+        const state = JSON.parse(localStorage.getItem(CHECKLIST_STORAGE_KEY) || '{}');
+        checklistItems.forEach(checkbox => {
+            if (state[checkbox.id]) {
+                const { verifier, timestamp } = state[checkbox.id];
+                checkbox.checked = true;
+                const verificationInfo = checkbox.closest('li')?.querySelector('.verification-info');
+                if (verificationInfo) {
+                    verificationInfo.innerHTML = `<strong>Verificado por:</strong> ${verifier} <br> <strong>Fecha y hora:</strong> ${timestamp}`;
+                    verificationInfo.classList.remove('hidden');
+                }
+            }
+        });
+        return state;
+    }
+    
+    let checklistState = loadChecklistState();
+
+    function adjustAccordionHeight(element) {
+        const accordionContent = element.closest('.accordion-content');
+        if (accordionContent && accordionContent.style.maxHeight) {
+            accordionContent.style.maxHeight = accordionContent.scrollHeight + 'px';
+        }
+    }
+
+    checklistItems.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                currentCheckbox = this;
+                modal.style.display = 'flex';
+                verifierNameInput.focus();
+            } else {
+                delete checklistState[this.id];
+                saveChecklistState(checklistState);
+                const verificationInfo = this.closest('li')?.querySelector('.verification-info');
+                if (verificationInfo) {
+                    verificationInfo.classList.add('hidden');
+                    verificationInfo.innerHTML = '';
+                    adjustAccordionHeight(this);
+                }
+            }
+        });
+    });
+
+    modalConfirm.addEventListener('click', () => {
+        const name = verifierNameInput.value.trim();
+        if (name && currentCheckbox) {
+            const now = new Date();
+            const dateTime = `${now.toLocaleDateString()} - ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            checklistState[currentCheckbox.id] = { verifier: name, timestamp: dateTime };
+            saveChecklistState(checklistState);
+            
+            const verificationInfo = currentCheckbox.closest('li')?.querySelector('.verification-info');
+            if (verificationInfo) {
+                verificationInfo.innerHTML = `<strong>Verificado por:</strong> ${name} <br> <strong>Fecha y hora:</strong> ${dateTime}`;
+                verificationInfo.classList.remove('hidden');
+                adjustAccordionHeight(currentCheckbox);
+            }
+            
+            modal.style.display = 'none';
+            verifierNameInput.value = '';
+        }
+    });
+
+    modalCancel.addEventListener('click', () => {
+        if (currentCheckbox) currentCheckbox.checked = false;
+        modal.style.display = 'none';
+    });
+
+    // --- Lógica de la Calculadora ---
+    const calculateBtn = document.getElementById('calculateBtn');
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', function() {
+            const flowDigestate = parseFloat(document.getElementById('flow_digestate').value);
+            const concPO4 = parseFloat(document.getElementById('po4_concentration').value);
+            const flowMgO = parseFloat(document.getElementById('flow_mgo').value);
+            const mgRatio = parseFloat(document.getElementById('mg_ratio').value);
+            const prepVolume = parseFloat(document.getElementById('prep_volume').value);
+            const mgoPurity = parseFloat(document.getElementById('mgo_purity').value);
+            const resultConcEl = document.getElementById('result_conc');
+            const resultMassEl = document.getElementById('result_mass');
+            const stepsEl = document.getElementById('calculation_steps');
+            const resultSection = document.getElementById('result-section');
+
+            if ([flowDigestate, concPO4, flowMgO, mgRatio, prepVolume, mgoPurity].some(isNaN) || mgoPurity > 100 || mgoPurity <= 0) {
+                resultConcEl.textContent = 'Error';
+                resultMassEl.textContent = 'Error';
+                stepsEl.innerHTML = '<p class="text-red-500">Revisa los valores. Deben ser números positivos y la pureza no puede exceder 100%.</p>';
+                resultSection.classList.remove('hidden');
+                return;
+            }
+
+            const molarMassPO4 = 94.9714;
+            const molarMassMgO = 40.3044;
+            const molarFlowPO4 = (concPO4 / molarMassPO4) * (flowDigestate / 1000);
+            const requiredMolarFlowMgO = molarFlowPO4 * mgRatio;
+            const requiredConcMgO_mmolL = requiredMolarFlowMgO / (flowMgO / 1000);
+            const requiredConcMgO_gL = (requiredConcMgO_mmolL * molarMassMgO) / 1000;
+            const massMgO_pure = requiredConcMgO_gL * (prepVolume / 1000);
+            const finalMass = massMgO_pure / (mgoPurity / 100);
+
+            resultConcEl.textContent = `${requiredConcMgO_gL.toFixed(4)} g/L`;
+            resultMassEl.textContent = `${finalMass.toFixed(4)} g`;
+            stepsEl.innerHTML = `<p>1. Flujo molar PO₄³⁻: <strong>${molarFlowPO4.toFixed(4)} mmol/min</strong></p><p>2. Flujo molar MgO req.: <strong>${requiredMolarFlowMgO.toFixed(4)} mmol/min</strong></p><p>3. Concentración MgO req.: <strong>${requiredConcMgO_gL.toFixed(4)} g/L</strong></p><p class="font-bold">4. Masa Final a Pesar: <strong>${finalMass.toFixed(4)} g</strong></p>`;
+            resultSection.classList.remove('hidden');
+        });
+    }
+
+    const clearBtn = document.getElementById('clearBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            document.getElementById('flow_digestate').value = '';
+            document.getElementById('po4_concentration').value = '';
+            document.getElementById('flow_mgo').value = '';
+            document.getElementById('prep_volume').value = '';
+            document.getElementById('mg_ratio').value = '1.2';
+            document.getElementById('mgo_purity').value = '98.3';
+            document.getElementById('result-section').classList.add('hidden');
+        });
+    }
+
+    // --- Lógica Botones de Protocolo ---
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (confirm('¿Estás seguro de que quieres reiniciar todas las verificaciones?')) {
+                checklistItems.forEach(cb => {
+                    cb.checked = false;
+                    const verificationInfo = cb.closest('li')?.querySelector('.verification-info');
+                    if(verificationInfo) verificationInfo.classList.add('hidden');
+                });
+                checklistState = {};
+                saveChecklistState(checklistState);
+            }
+        });
+    }
+    const printBtn = document.getElementById('print-btn');
+    if(printBtn) printBtn.addEventListener('click', () => window.print());
+
+    // --- Lógica de Conexión WebSocket ---
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const livePh = document.getElementById('live-ph');
+    const liveTemp = document.getElementById('live-temp');
+    const errorMessage = document.getElementById('error-message');
+
+    function connectWebSocket() {
+        const ws = new WebSocket('wss://panel-reactor-servidor.onrender.com');
+        ws.onopen = function() {
+            statusDot.className = 'status-dot status-connected';
+            statusText.textContent = 'Conectado al servidor';
+            errorMessage.classList.add('hidden');
+        };
+        ws.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.error) {
+                    errorMessage.textContent = `Error del servidor: ${data.error}`;
+                    errorMessage.classList.remove('hidden');
+                    return;
+                }
+                if (data.ph !== undefined) livePh.textContent = data.ph.toFixed(2);
+                if (data.temperature !== undefined) liveTemp.innerHTML = `${data.temperature.toFixed(1)} <span class="text-2xl">&deg;C</span>`;
+            } catch (e) { console.error('Error al procesar el mensaje:', e); }
+        };
+        ws.onclose = function() {
+            statusDot.className = 'status-dot status-disconnected';
+            statusText.textContent = 'Desconectado. Intentando reconectar...';
+            setTimeout(connectWebSocket, 5000);
+        };
+        ws.onerror = function() { ws.close(); };
+    }
+
+    connectWebSocket();
+});
+</script>
+</body>
+</html>
