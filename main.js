@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (existing) existing.remove();
         const notice = document.createElement('div');
         notice.id = 'global-notice';
+        // Accessible status region so screen readers announce notices
+        notice.setAttribute('role', 'status');
+        notice.setAttribute('aria-live', 'polite');
         notice.className = 'fixed top-4 right-4 z-50 bg-indigo-600 text-white px-4 py-2 rounded shadow-lg';
         notice.textContent = message;
         document.body.appendChild(notice);
@@ -75,12 +78,15 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
         applyTheme('light');
     }
-    themeToggleBtn.addEventListener('click', () => {
-        const isDark = document.documentElement.classList.toggle('dark');
-        const newTheme = isDark ? 'dark' : 'light';
-        localStorage.setItem('color-theme', newTheme);
-        applyTheme(newTheme);
-    });
+    // Guard: only attach listener if the toggle exists
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            const newTheme = isDark ? 'dark' : 'light';
+            localStorage.setItem('color-theme', newTheme);
+            applyTheme(newTheme);
+        });
+    }
 
     // TABS (ARIA + keyboard)
     const tabs = Array.from(document.querySelectorAll('.tab-btn'));
@@ -190,20 +196,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         header.addEventListener('click', () => {
             const content = header.nextElementSibling;
+            const isCurrentlyOpen = content && content.style.maxHeight && content.style.maxHeight !== '0px';
             // close all
             accordionHeaders.forEach(h => {
                 const c = h.nextElementSibling;
                 if (c) { c.style.maxHeight = null; c.setAttribute('aria-hidden', 'true'); }
                 h.setAttribute('aria-expanded', 'false');
             });
-            // open clicked
-            if (content) {
-                const wasOpen = content.style.maxHeight;
-                if (!wasOpen || wasOpen === '0px') {
-                    content.style.maxHeight = content.scrollHeight + 'px';
-                    content.setAttribute('aria-hidden', 'false');
-                    header.setAttribute('aria-expanded', 'true');
-                }
+            // If it was closed before click, open it; if it was open, leave closed (toggle)
+            if (content && !isCurrentlyOpen) {
+                content.style.maxHeight = content.scrollHeight + 'px';
+                content.setAttribute('aria-hidden', 'false');
+                header.setAttribute('aria-expanded', 'true');
             }
             // make this header the roving tabindex target
             setRovingTabindex(i);
@@ -337,6 +341,69 @@ document.addEventListener('DOMContentLoaded', function () {
     modalCancel.addEventListener('click', () => { if (currentCheckbox) { currentCheckbox.checked = false; currentCheckbox.dispatchEvent(new Event('change')); } modal.style.display = 'none'; });
 
     // Calculadora logic: keep in HTML (small) - handlers remain in index.html for now
+    // ---------------- Calculadora de MgO (implementación del usuario) ----------------
+    const calculateBtn = document.getElementById('calculateBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const flowDigestate = parseFloat(document.getElementById('flow_digestate').value);
+            const concPO4 = parseFloat(document.getElementById('po4_concentration').value);
+            const flowMgO = parseFloat(document.getElementById('flow_mgo').value);
+            const mgRatio = parseFloat(document.getElementById('mg_ratio').value);
+            const prepVolume = parseFloat(document.getElementById('prep_volume').value);
+            const mgoPurity = parseFloat(document.getElementById('mgo_purity').value);
+            const resultConcEl = document.getElementById('result_conc');
+            const resultMassEl = document.getElementById('result_mass');
+            const stepsEl = document.getElementById('calculation_steps');
+            const resultSection = document.getElementById('result-section');
+            // handle po4 type conversion (PO4 as P -> PO4)
+            const po4Type = document.getElementById('po4_type');
+            let concPO4_used = concPO4;
+            if (po4Type && po4Type.value === 'po4p') concPO4_used = concPO4 * 3.066;
+            // handle efficiency
+            const efficiencyInput = document.getElementById('efficiency');
+            const efficiency_pct = efficiencyInput ? parseFloat(efficiencyInput.value) : 100;
+
+            if ([flowDigestate, concPO4, flowMgO, mgRatio, prepVolume, mgoPurity].some(isNaN) || mgoPurity > 100 || mgoPurity <= 0) {
+                if (resultConcEl) resultConcEl.textContent = 'Error';
+                if (resultMassEl) resultMassEl.textContent = 'Error';
+                if (stepsEl) stepsEl.innerHTML = '<p class="text-red-500">Revisa los valores.</p>';
+                if (resultSection) resultSection.classList.remove('hidden');
+                return;
+            }
+            const molarMassPO4 = 94.9714; const molarMassMgO = 40.3044;
+            // molarFlowPO4 in mmol/min (user formula)
+            const molarFlowPO4 = (concPO4_used / molarMassPO4) * (flowDigestate / 1000);
+            const requiredMolarFlowMgO = molarFlowPO4 * mgRatio;
+            const requiredConcMgO_mmolL = requiredMolarFlowMgO / (flowMgO / 1000);
+            const requiredConcMgO_gL = (requiredConcMgO_mmolL * molarMassMgO) / 1000;
+            const massMgO_pure = requiredConcMgO_gL * (prepVolume / 1000);
+            // apply purity
+            let finalMass = massMgO_pure / (mgoPurity / 100);
+            // apply efficiency (if provided, reduce efficiency -> increase mass)
+            const eff_frac = (isNaN(efficiency_pct) || efficiency_pct <= 0) ? 1 : (efficiency_pct / 100);
+            if (eff_frac > 0 && eff_frac < 1) finalMass = finalMass / eff_frac;
+
+            if (resultConcEl) resultConcEl.textContent = `${requiredConcMgO_gL.toFixed(4)} g/L`;
+            if (resultMassEl) resultMassEl.textContent = `${finalMass.toFixed(4)} g`;
+            if (stepsEl) {
+                stepsEl.innerHTML = `<p>1. Flujo molar PO₄³⁻: <strong>${molarFlowPO4.toFixed(4)} mmol/min</strong></p><p>2. Flujo molar MgO req.: <strong>${requiredMolarFlowMgO.toFixed(4)} mmol/min</strong></p><p>3. Concentración MgO req.: <strong>${requiredConcMgO_gL.toFixed(4)} g/L</strong></p><p class="font-bold">4. Masa Final a Pesar: <strong>${finalMass.toFixed(4)} g</strong></p>`;
+            }
+            if (resultSection) resultSection.classList.remove('hidden');
+        });
+    }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            const ids = ['flow_digestate','po4_concentration','flow_mgo','prep_volume'];
+            ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            const mgRatioEl = document.getElementById('mg_ratio'); if (mgRatioEl) mgRatioEl.value = '1.2';
+            const mgoPurityEl = document.getElementById('mgo_purity'); if (mgoPurityEl) mgoPurityEl.value = '98.3';
+            const stepsEl = document.getElementById('calculation_steps'); if (stepsEl) { stepsEl.innerHTML = ''; stepsEl.classList.add('hidden'); }
+            const resultSection = document.getElementById('result-section'); if (resultSection) resultSection.classList.add('hidden');
+        });
+    }
+    // ---------------- end calculadora ----------------
 
     // Buttons: reset, print, send
     const resetBtn = document.getElementById('reset-btn');
