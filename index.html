@@ -395,9 +395,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const errorMessage = document.getElementById('error-message');
 
     function connectWebSocket() {
-        // =================================================================
-        // AQUÍ ESTÁ LA ÚNICA CORRECCIÓN CON TU URL EXACTA
-        // =================================================================
         const ws = new WebSocket('wss://panel-reactor-servidor.onrender.com');
 
         ws.onopen = function() {
@@ -414,8 +411,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 if (data.ph !== undefined) livePh.textContent = data.ph.toFixed(2);
-                if (data.temperature !== undefined) liveTemp.innerHTML = `${data.temperature.toFixed(1)} <span class="text-2xl">&deg;C</span>`;
-            } catch (e) { console.error('Error al procesar el mensaje:', e); }
+                if (data.temp !== undefined) {
+                    liveTemp.innerHTML = `${data.temp.toFixed(1)} <span class="text-2xl">&deg;C</span>`;
+                }
+                
+            } catch (e) { 
+                console.error('Error al procesar el mensaje:', e); 
+            }
         };
         ws.onclose = function() {
             statusDot.className = 'status-dot status-disconnected';
