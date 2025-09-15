@@ -2,11 +2,13 @@
     --bg-color: #f3f4f6; --card-bg-color: #ffffff; --text-color: #1f2937; --subtle-text-color: #6b7280;
     --border-color: #d1d5db; --tab-active-bg: #eef2ff; --blue-accent-bg: #eff6ff; --orange-accent-bg: #fff7ed;
     --button-secondary-bg: #e5e7eb; --input-bg-color: #ffffff; --input-text-color: #111827;
+    --focus-ring: rgba(59,130,246,0.14);
 }
 html.dark {
     --bg-color: #111827; --card-bg-color: #1f2937; --text-color: #f9fafb; --subtle-text-color: #9ca3af;
     --border-color: #4b5563; --tab-active-bg: #312e81; --blue-accent-bg: #1e3a8a; --orange-accent-bg: #7c2d12;
     --button-secondary-bg: #374151; --input-bg-color: #374151; --input-text-color: #f9fafb;
+    --focus-ring: rgba(99,102,241,0.12);
 }
 body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); }
 .card { background-color: var(--card-bg-color); border-radius: 1rem; }
@@ -39,11 +41,101 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); colo
 .pdf-clone-container .accordion-content { max-height: none !important; }
 .pdf-clone-container svg { display: none !important; }
 @media print { body * { visibility: hidden; } #content-protocolo, #content-protocolo * { visibility: visible; } #content-protocolo { position: absolute; left: 0; top: 0; width: 100%; } .no-print { display: none; } .accordion-content { max-height: none !important; overflow: visible !important; } }
-.emergency-section { background-color: #fee2e2; border: 2px solid #ef4444; }
-.emergency-header { background-color: #fecaca; color: #dc2626; }
+.emergency-section { background-color: #fff5f5; border: 1px solid #fca5a5; }
+/* Use stronger red header with white text in light mode for contrast */
+.emergency-header { background-color: #ef4444; color: #ffffff; }
 @media (prefers-color-scheme: dark) {
-    .emergency-section { background-color: #7f1d1d; border-color: #ef4444; }
-    .emergency-header { background-color: #991b1b; color: #fecaca; }
+    .emergency-section { background-color: #6b1414; border-color: #ef4444; }
+    .emergency-header { background-color: #991b1b; color: #ffffff; }
+}
+
+/* Make sure the expanded content inside the emergency block remains light and legible in light mode */
+.emergency-section .accordion-content {
+    background-color: transparent; /* avoid overlaying with dark tints */
+    color: var(--text-color);
+}
+.emergency-section .accordion-content p,
+.emergency-section .accordion-content li,
+.emergency-section .accordion-content .font-semibold,
+.emergency-section .accordion-content .list-decimal,
+.emergency-section .accordion-content .list-disc {
+    color: var(--text-color);
+}
+
+/* Ensure the contacts box has explicit light background and readable text in light mode */
+.emergency-section .bg-yellow-100 {
+    background-color: #fef3c7 !important; /* slightly warmer yellow */
+    color: var(--text-color) !important;
+}
+/* And in dark mode keep the dark yellow background but ensure text is light */
+@media (prefers-color-scheme: dark) {
+    .emergency-section .bg-yellow-100 {
+        background-color: #a43e00 !important; /* intense orange for dark mode */
+        color: #fff !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4) !important;
+    }
+}
+
+/* Strong overrides to prevent inheritance from other rules or inline styles
+   but only apply to the expanded content area, not the header which must keep its own color. */
+.emergency-section .accordion-content, .emergency-section .accordion-content * {
+    background-color: inherit !important;
+    color: inherit !important;
+}
+
+/* Explicitly enforce a light background and readable text for the emergency block in light mode */
+html:not(.dark) .emergency-section {
+    background-color: #fff5f5 !important;
+    color: #1f2937 !important;
+}
+
+/* Selection inside emergency block: avoid full dark overlay when users select text */
+.emergency-section ::selection {
+    background: rgba(255, 235, 59, 0.18); /* soft yellow selection */
+    color: #111827;
+}
+
+/* Strong overrides to neutralize any overlay, blending or opacity accidentally applied */
+html:not(.dark) .accordion-item.emergency-section,
+html:not(.dark) .accordion-item.emergency-section .accordion-content,
+html:not(.dark) .accordion-item.emergency-section > .accordion-content,
+html:not(.dark) .accordion-item.emergency-section > .emergency-header,
+html:not(.dark) .accordion-item.emergency-section * {
+    background-color: unset !important;
+    background: unset !important;
+    color: unset !important;
+    opacity: 1 !important;
+    mix-blend-mode: normal !important;
+    filter: none !important;
+}
+
+/* Now explicitly set the desired light colors */
+html:not(.dark) .accordion-item.emergency-section {
+    background-color: #fff5f5 !important;
+    border-color: #fca5a5 !important;
+}
+html:not(.dark) .accordion-item.emergency-section .emergency-header {
+    background-color: #ef4444 !important; /* lighter red for better contrast */
+    color: #ffffff !important;
+}
+html:not(.dark) .accordion-item.emergency-section .accordion-content {
+    background-color: transparent !important;
+    color: #1f2937 !important;
+}
+
+/* Ensure contact box is readable */
+html:not(.dark) .accordion-item.emergency-section .bg-yellow-100 {
+    background-color: #fef3c7 !important;
+    color: #1f2937 !important;
+}
+/* Dark mode: ensure header is an intense red (good contrast with white text) */
+html.dark .accordion-item.emergency-section .emergency-header {
+    background-color: #991b1b !important; /* intense red for dark mode */
+    color: #ffffff !important;
+}
+html.dark .accordion-item.emergency-section {
+    background-color: #6b1414 !important;
+    border-color: #ef4444 !important;
 }
 /* Asegurar que el bloque de la calculadora use el mismo color de texto que el protocolo/checklist */
 #content-calculadora { color: var(--text-color); }
@@ -55,5 +147,36 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); colo
 #content-calculadora p, #content-calculadora label { font-size: 0.875rem; }
 #content-calculadora .card { font-size: 1rem; }
 
-/* Small focus styles for accessibility */
-.tab-btn:focus, .accordion-header:focus, .input-custom:focus { outline: 3px solid rgba(59,130,246,0.25); outline-offset: 2px; }
+/* Small, subtle focus styles for accessibility (visible but less intense) */
+.tab-btn:focus, .accordion-header:focus, .input-custom:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus-ring);
+    border-color: var(--border-color);
+    border-radius: 0.5rem;
+}
+
+/* Avoid showing the ring for pointer focus unless the browser indicates focus-visible */
+.tab-btn:focus:not(:focus-visible), .accordion-header:focus:not(:focus-visible), .input-custom:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+/* Highest-priority dark-mode override for the emergency contacts box
+   (ensures the element gets the intense orange regardless of previous inherit/unset rules) */
+html.dark .accordion-item.emergency-section .accordion-content .bg-yellow-100,
+html.dark .accordion-item.emergency-section .bg-yellow-100 {
+    background-color: #a43e00 !important;
+    color: #ffffff !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45) !important;
+    border-radius: 0.5rem !important;
+}
+
+/* Theme toggle (sun/moon) icon styling */
+#theme-toggle { display: inline-flex; align-items: center; justify-content: center; }
+#theme-toggle svg { width: 1.25rem; height: 1.25rem; fill: currentColor; }
+/* Light mode: show dark icon color, subtle bg on hover */
+html:not(.dark) #theme-toggle { color: #111827; }
+html:not(.dark) #theme-toggle:hover { background-color: rgba(17,24,39,0.06); }
+/* Dark mode: lighter icon and subtle bg on hover */
+html.dark #theme-toggle { color: #f9fafb; }
+html.dark #theme-toggle:hover { background-color: rgba(255,255,255,0.04); }
+#theme-toggle:focus { box-shadow: 0 0 0 4px rgba(59,130,246,0.12); border-radius: 0.5rem; outline: none; }
