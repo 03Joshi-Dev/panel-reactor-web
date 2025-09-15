@@ -395,7 +395,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const errorMessage = document.getElementById('error-message');
 
     function connectWebSocket() {
+        // =================================================================
+        // AQUÍ ESTÁ LA ÚNICA CORRECCIÓN CON TU URL EXACTA
+        // =================================================================
         const ws = new WebSocket('wss://panel-reactor-servidor.onrender.com');
+
         ws.onopen = function() {
             statusDot.className = 'status-dot status-connected';
             statusText.textContent = 'Conectado al servidor';
